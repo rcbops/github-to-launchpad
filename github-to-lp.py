@@ -175,4 +175,4 @@ def main():
                      args.skip_until)
 
 if __name__ == '__main__':
-  main()
+    main()
