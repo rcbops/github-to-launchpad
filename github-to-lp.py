@@ -41,7 +41,7 @@ def comments_on(issue):
     def comment_dict(comment):
         return {'username': str(comment.user),
                 'date': str(comment.created_at),
-                'comment_body': comment.body_text}
+                'comment_body': comment.body}
     return SEPARATOR.join(COMMENT_TEMPLATE.format(**comment_dict(c))
                           for c in issue.iter_comments())
 
@@ -69,8 +69,10 @@ class MigrationAssistant(object):
         return self.repository.iter_issues(state=state,
                                            direction=direction)
 
-    def _migrate(self, state):
+    def _migrate(self, state, skip_until):
         for issue in self._issues(state):
+            if issue.number >= skip_until:
+                continue
             title = issue.title
             description = make_description_from(issue)
             yield issue, self._create_lp_bug(title, description)
@@ -94,11 +96,12 @@ class MigrationAssistant(object):
     def login_to_launchpad(self, auth_name='github-to-lp', env='production'):
         self.launchpad = launchpad.Launchpad.login_with(auth_name, env)
 
-    def migrate_issues(self, from_repository, to_distribution, state='open'):
+    def migrate_issues(self, from_repository, to_distribution, state='open',
+                       skip_until=None):
         self.distribution = self.launchpad.distributions[to_distribution]
         owner, repo = from_repository.split('/')
         self.repository = self.github.repository(owner, repo)
-        for gh_issue, lp_bug in self._migrate(state):
+        for gh_issue, lp_bug in self._migrate(state, skip_until):
             if lp_bug is not None:
                 print("Migrating GH#{0} to {1}".format(gh_issue.number,
                                                        lp_bug.web_link))
@@ -127,18 +130,23 @@ def parse_args():
     parser.add_argument(
         'from_repository',
         help='Repository on GitHub to transfer issues from. Example: '
-                    'rcbops/ansible-lxc-rpc'
+             'rcbops/ansible-lxc-rpc'
         )
     parser.add_argument(
         'to_distribution',
         help='The distribution name on LaunchPad. Example: '
-                    'openstack-ansible'
+             'openstack-ansible'
         )
     parser.add_argument(
         '--state',
         help='State in which issues should be in to be moved. '
-                    'Accepted values: open, closed, all',
+             'Accepted values: open, closed, all',
         default='open'
+        )
+    parser.add_argument(
+        '--skip-until',
+        help='Skip past issues until you reach the one specified.',
+        type=int
         )
     return parser.parse_args()
 
@@ -149,7 +157,8 @@ def main():
     (user, password) = get_username_and_password()
     m.login_to_github(user, password)
     m.login_to_launchpad()
-    m.migrate_issues(args.from_repository, args.to_distribution, args.state)
+    m.migrate_issues(args.from_repository, args.to_distribution, args.state,
+                     args.skip_until)
 
 if __name__ == '__main__':
   main()
