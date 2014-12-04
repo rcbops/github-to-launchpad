@@ -9,7 +9,7 @@ from launchpadlib import launchpad
 
 try:
     input_func = raw_input
-except NameError: # Python 3.x
+except NameError:  # Python 3.x
     input_func = input
 
 
@@ -20,7 +20,31 @@ TEMPLATE = """Opened by {username} on {date} at {github_url}
 {issue_body}
 
 Tags: {issue_tags}
+
+====================== COMMENTS ============================
+
+{comments}
 """
+
+COMMENT_TEMPLATE = """Comment created by {username} on {date}
+
+{comment_body}
+"""
+
+SEPARATOR = """
+------------------------------------------------------------
+
+"""
+
+
+def comments_on(issue):
+    def comment_dict(comment):
+        return {'username': str(comment.user),
+                'date': str(comment.created_at),
+                'comment_body': comment.body_text}
+    return SEPARATOR.join(COMMENT_TEMPLATE.format(**comment_dict(c))
+                          for c in issue.iter_comments())
+
 
 def make_description_from(issue):
     values = {
@@ -29,6 +53,7 @@ def make_description_from(issue):
         'github_url': issue.html_url,
         'issue_body': issue.body_text,
         'issue_tags': ', '.join(str(l) for l in issue.labels),
+        'comments': comments_on(issue),
         }
     return TEMPLATE.format(**values)
 
@@ -93,7 +118,7 @@ def get_username_and_password():
 
         return input_str
 
-    return (prompt_for_input('Enter your GitHub username: '),
+    return (prompt_for_input('Enter your GitHub username: ', secure=False),
             prompt_for_input('Enter your GitHub password: '))
 
 
