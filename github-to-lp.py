@@ -22,7 +22,6 @@ TEMPLATE = """Opened by {username} on {date} at {github_url}
 Tags: {issue_tags}
 """
 
-
 def make_description_from(issue):
     values = {
         'date': str(issue.created_at),
@@ -31,7 +30,7 @@ def make_description_from(issue):
         'issue_body': issue.body_text,
         'issue_tags': ', '.join(str(l) for l in issue.labels),
         }
-    return TEMPLATE.format(values)
+    return TEMPLATE.format(**values)
 
 
 class MigrationAssistant(object):
@@ -102,17 +101,17 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         'from_repository',
-        description='Repository on GitHub to transfer issues from. Example: '
+        help='Repository on GitHub to transfer issues from. Example: '
                     'rcbops/ansible-lxc-rpc'
         )
     parser.add_argument(
         'to_distribution',
-        description='The distribution name on LaunchPad. Example: '
+        help='The distribution name on LaunchPad. Example: '
                     'openstack-ansible'
         )
     parser.add_argument(
         '--state',
-        description='State in which issues should be in to be moved. '
+        help='State in which issues should be in to be moved. '
                     'Accepted values: open, closed, all',
         default='open'
         )
@@ -126,3 +125,6 @@ def main():
     m.login_to_github(user, password)
     m.login_to_launchpad()
     m.migrate_issues(args.from_repository, args.to_distribution, args.state)
+
+if __name__ == '__main__':
+  main()
