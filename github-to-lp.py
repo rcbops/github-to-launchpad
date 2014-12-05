@@ -87,6 +87,9 @@ class MigrationAssistant(object):
         for issue in self._issues(state):
             if issue.number >= skip_until:
                 continue
+            # If the issue is also a pull request, skip it
+            if issue.pull_request is not None:
+                continue
             title = issue.title
             description = make_description_from(issue)
             yield issue, self._create_lp_bug(title, description)
